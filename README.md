@@ -73,7 +73,9 @@ To update the used APCpp version:
 1. Copy all `*.lib` over from `APCpp\build\` to `Archipelago\Source\APCpp\lib\Win64` and subdirectories
 2. Copy all `*.h` over from `APCpp` to `Archipelago\Source\APCpp\inc`
 
-For linux, its not currently working
+For the Linux dedicated server, run `./Tools/build-apcpp-linux.sh`, which builds
+APCpp with Unreal's own toolchain and stages it into
+`Source/APCpp/lib/Linux`. See [Docs/LinuxServer.md](Docs/LinuxServer.md).
 
 ### Archipelago Server
 
