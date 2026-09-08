@@ -34,14 +34,21 @@ fi
 # which a plain `ulimit -n 1048576` cannot do when the hard limit sits lower.
 ulimit -n "$(ulimit -Hn)"
 
+# The cook step runs in the editor, so that target has to exist first.
 "$UNREAL_ENGINE_DIR/Engine/Build/BatchFiles/Linux/Build.sh" \
     FactoryEditor Linux Development -project="$uproject"
 
+"$UNREAL_ENGINE_DIR/Engine/Build/BatchFiles/Linux/Build.sh" \
+    FactoryServer Linux Shipping -project="$uproject"
+
+# Both targets are built above, so PackagePlugin only cooks, stages and zips.
+# Letting it build would pull in FactoryGameEGS and FactoryGameSteam, and the
+# engine rejects game targets for Linux because Satisfactory has no Linux client.
 "$UNREAL_ENGINE_DIR/Engine/Build/BatchFiles/RunUAT.sh" \
     -ScriptsForProject="$uproject" PackagePlugin \
     -Project="$uproject" \
     -dlcname=Archipelago \
-    -merge -build -server \
+    -merge -server \
     -serverconfig=Shipping \
     -serverplatform=Linux \
     -noclient \
