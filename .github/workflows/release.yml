@@ -1,0 +1,53 @@
+name: Release
+
+# Building this mod needs the CSS engine and the Wwise SDK, which together are
+# well over 40 GB and are both access-gated. That does not fit a GitHub-hosted
+# runner, so this expects a self-hosted runner that already has both installed,
+# pointed at by the two repository variables below.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  linux-server:
+    runs-on: self-hosted
+    env:
+      UNREAL_ENGINE_DIR: ${{ vars.UNREAL_ENGINE_DIR }}
+      SATISFACTORY_PROJECT_DIR: ${{ vars.SATISFACTORY_PROJECT_DIR }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check the staged APCpp archives
+        run: ./Tools/check-apcpp-linux-link.sh
+
+      - name: Package for the Linux dedicated server
+        run: ./Tools/package-linux-server.sh
+
+      - name: Collect the artifact
+        id: collect
+        run: |
+          src=$(ls -1 "$SATISFACTORY_PROJECT_DIR/Saved/ArchivedPlugins/Archipelago/"*.zip | head -1)
+          mkdir -p dist
+          cp "$src" dist/Archipelago-LinuxServer.zip
+          echo "path=dist/Archipelago-LinuxServer.zip" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Archipelago-LinuxServer
+          path: ${{ steps.collect.outputs.path }}
+
+      - name: Attach to the release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=${GITHUB_REF#refs/tags/}
+          gh release view "$tag" >/dev/null 2>&1 \
+            || gh release create "$tag" --title "$tag" --generate-notes
+          gh release upload "$tag" "${{ steps.collect.outputs.path }}" --clobber

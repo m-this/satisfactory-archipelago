@@ -81,10 +81,37 @@ That last command printing nothing is the result you want.
 
 ## Packaging
 
-Building the mod itself still needs the modding environment: the engine is
-private and access goes through linking a GitHub account to an Epic Games
-account. See the
+Packaging needs the full modding environment: the engine is private and access
+goes through linking a GitHub account to an Epic Games account, and the Wwise
+SDK needs an Audiokinetic account. See the
 [Linux setup guide](https://docs.ficsit.app/satisfactory-modding/latest/Development/Linux/LinuxSetup.html).
 
-With the environment in place, select `Shipping_Server` and `Linux`, or use
-Alpakit's Linux Server target.
+Take the Wwise download command from that guide as written. Trimming its filters
+looks safe and is not: dropping the Windows platforms makes `integrate-ue` fail
+on a missing `x64_vc160`, and dropping the empty `--filter DeploymentPlatforms=`
+leaves out the platform-agnostic SDK headers, so the build fails on a missing
+`AkWwiseSDKVersion.h`.
+
+With the environment in place:
+
+```bash
+export UNREAL_ENGINE_DIR=/path/to/UnrealEngineCSS
+export SATISFACTORY_PROJECT_DIR=/path/to/StarterProject
+./Tools/package-linux-server.sh
+```
+
+That builds the editor target, which the cook step needs, then runs Alpakit's
+`PackagePlugin` for the Linux server and writes the zip to
+`$SATISFACTORY_PROJECT_DIR/Saved/ArchivedPlugins/Archipelago/`.
+
+## Releases
+
+`.github/workflows/release.yml` runs the same script on a tag push and attaches
+the zip to the GitHub release.
+
+It needs a **self-hosted runner**. The engine and the Wwise SDK are over 40 GB
+together and both are access-gated, which rules out a GitHub-hosted runner. Set
+two repository variables so the workflow can find them:
+
+- `UNREAL_ENGINE_DIR`
+- `SATISFACTORY_PROJECT_DIR`
