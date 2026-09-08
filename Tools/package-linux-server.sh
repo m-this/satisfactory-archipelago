@@ -30,8 +30,9 @@ if [[ ! -e $mod_link ]] || [[ $(readlink -f "$mod_link") != "$repo_root" ]]; the
 fi
 
 # While paking, zen raises the descriptor limit to its own maximum, which fails
-# when that is above fs.nr_open.
-ulimit -n 1048576
+# when that is above fs.nr_open. Go to the hard limit instead of a fixed number,
+# which a plain `ulimit -n 1048576` cannot do when the hard limit sits lower.
+ulimit -n "$(ulimit -Hn)"
 
 "$UNREAL_ENGINE_DIR/Engine/Build/BatchFiles/Linux/Build.sh" \
     FactoryEditor Linux Development -project="$uproject"

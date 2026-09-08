@@ -61,7 +61,7 @@ public:
 		USubsystemActorManager* SubsystemActorManager = world->GetSubsystem<USubsystemActorManager>();
 		fgcheck(SubsystemActorManager);
 
-		for (const TPair<TSubclassOf<AModSubsystem>, AModSubsystem*>& subsystemEntry : SubsystemActorManager->GetSubsystemActors()) {
+		for (const TPair<TSubclassOf<AModSubsystem>, TObjectPtr<AModSubsystem>>& subsystemEntry : SubsystemActorManager->GetSubsystemActors()) {
 			if (subsystemEntry.Key->IsChildOf(T::StaticClass()))
 				return Cast<T>(subsystemEntry.Value);
 		}

@@ -116,7 +116,7 @@ TSubclassOf<UFGSchematic> AApHardDriveGachaSubsystem::GetRandomSchematic(TSet<TS
 	//Schematic should be randomly selected from the first x schematics in apHardDriveSchematics that arent excluded
 
 	TArray<TSubclassOf<UFGSchematic>> schematicsToOffer;
-	for (const TSubclassOf<UFGSchematic> schematic : apHardDriveSchematics) {
+	for (const TSubclassOf<UFGSchematic>& schematic : apHardDriveSchematics) {
 		if (excludedSchematics.Contains(schematic))
 			continue;
 

@@ -10,6 +10,8 @@
 
 #include "ApHardDriveGachaSubsystem.generated.h"
 
+class AApSchematicPatcherSubsystem;
+
 DECLARE_LOG_CATEGORY_EXTERN(LogApHardDriveGachaSubsystem, Log, All);
 
 UCLASS()
