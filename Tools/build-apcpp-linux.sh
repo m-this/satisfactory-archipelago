@@ -15,9 +15,10 @@ build_dir=$work_dir/build
 lib_dir=$repo_root/Source/APCpp/lib/Linux
 inc_dir=$repo_root/Source/APCpp/inc
 
-if [[ -z ${UE_LINUX_TOOLCHAIN:-} ]]; then
-    echo "Set UE_LINUX_TOOLCHAIN to an unpacked v25_clang-18.1.0-rockylinux8 directory." >&2
-    echo "Download: https://cdn.unrealengine.com/Toolchain_Linux/native-linux-v25_clang-18.1.0-rockylinux8.tar.gz" >&2
+if [[ -z ${UNREAL_ENGINE_DIR:-} ]]; then
+    echo "Set UNREAL_ENGINE_DIR to the folder containing Engine/." >&2
+    echo "The engine supplies both the clang Unreal builds with and the libc++ it" >&2
+    echo "compiles against, which the standalone toolchain download does not match." >&2
     exit 1
 fi
 

@@ -1,25 +1,46 @@
-# Builds against the same toolchain Unreal uses for its Linux targets, so the
-# static libraries are ABI-compatible with the engine.
+# Builds against the exact compiler and standard library Unreal uses for its
+# Linux targets, so the static libraries are ABI-compatible with the engine.
 #
-# Satisfactory 1.2 runs on UE 5.6.1-CSS, whose Linux toolchain is
-# v25_clang-18.1.0-rockylinux8. The engine compiles with its own libc++
-# (Engine/Source/ThirdParty/Unix/LibCxx), not the system libstdc++, and APCpp
-# exposes std::string and std::vector across its API, so anything built with
-# libstdc++ fails to link into the mod.
+# Everything is derived from the engine rather than from a separately downloaded
+# toolchain, because the two do not agree: the bundled toolchain carries libc++
+# 18.1.0, while the engine compiles with its own libc++ under
+# Engine/Source/ThirdParty/Unix/LibCxx, which is 19.1.7 on 5.6.1-CSS. APCpp
+# exposes std::string, std::vector and std::function across its API, so building
+# against the wrong headers is exactly the mismatch that has to be avoided.
 
+if(NOT UNREAL_ENGINE_DIR)
+    set(UNREAL_ENGINE_DIR "$ENV{UNREAL_ENGINE_DIR}")
+endif()
+if(NOT UNREAL_ENGINE_DIR)
+    message(FATAL_ERROR "Set UNREAL_ENGINE_DIR to the folder containing Engine/")
+endif()
+
+set(UE_TARGET_TRIPLE "x86_64-unknown-linux-gnu")
+set(UE_LIBCXX_DIR "${UNREAL_ENGINE_DIR}/Engine/Source/ThirdParty/Unix/LibCxx")
+
+if(NOT EXISTS "${UE_LIBCXX_DIR}/include/c++/v1/__config")
+    message(FATAL_ERROR "No libc++ headers under ${UE_LIBCXX_DIR}")
+endif()
+
+# The engine ships the clang it was built with; prefer it over anything on PATH.
 if(NOT UE_LINUX_TOOLCHAIN)
     set(UE_LINUX_TOOLCHAIN "$ENV{UE_LINUX_TOOLCHAIN}")
 endif()
 if(NOT UE_LINUX_TOOLCHAIN)
-    message(FATAL_ERROR "Set UE_LINUX_TOOLCHAIN to an unpacked v25_clang-18.1.0-rockylinux8 directory")
+    file(GLOB _sdk_candidates
+        "${UNREAL_ENGINE_DIR}/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64/*")
+    foreach(_candidate ${_sdk_candidates})
+        if(EXISTS "${_candidate}/${UE_TARGET_TRIPLE}/bin/clang++")
+            set(UE_LINUX_TOOLCHAIN "${_candidate}")
+            break()
+        endif()
+    endforeach()
+endif()
+if(NOT UE_LINUX_TOOLCHAIN)
+    message(FATAL_ERROR "No clang toolchain under ${UNREAL_ENGINE_DIR}/Engine/Extras/ThirdPartyNotUE/SDKs")
 endif()
 
-set(UE_TARGET_TRIPLE "x86_64-unknown-linux-gnu")
 set(UE_TOOLCHAIN_ROOT "${UE_LINUX_TOOLCHAIN}/${UE_TARGET_TRIPLE}")
-
-if(NOT EXISTS "${UE_TOOLCHAIN_ROOT}/bin/clang++")
-    message(FATAL_ERROR "No clang++ under ${UE_TOOLCHAIN_ROOT}/bin")
-endif()
 
 set(CMAKE_C_COMPILER "${UE_TOOLCHAIN_ROOT}/bin/clang")
 set(CMAKE_CXX_COMPILER "${UE_TOOLCHAIN_ROOT}/bin/clang++")
@@ -37,5 +58,5 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(UE_COMMON_FLAGS "--target=${UE_TARGET_TRIPLE} -fPIC -fvisibility=hidden")
 
 set(CMAKE_C_FLAGS_INIT "${UE_COMMON_FLAGS}")
-set(CMAKE_CXX_FLAGS_INIT "${UE_COMMON_FLAGS} -nostdinc++ -isystem ${UE_TOOLCHAIN_ROOT}/include/c++/v1")
-set(CMAKE_EXE_LINKER_FLAGS_INIT "-fuse-ld=lld -stdlib=libc++")
+set(CMAKE_CXX_FLAGS_INIT "${UE_COMMON_FLAGS} -nostdinc++ -isystem ${UE_LIBCXX_DIR}/include/c++/v1")
+set(CMAKE_EXE_LINKER_FLAGS_INIT "-fuse-ld=lld -nostdlib++ -L${UE_LIBCXX_DIR}/lib/Unix/${UE_TARGET_TRIPLE} -lc++ -lc++abi")

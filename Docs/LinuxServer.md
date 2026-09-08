@@ -12,18 +12,24 @@ Linux targets with its own libc++, not the system libstdc++, and APCpp passes
 with libstdc++ mangles those types differently and will not link, which is why
 APCpp's own CI produces Linux artifacts that are useless here.
 
-`Source/APCpp/lib/Linux` is therefore built with the same toolchain Unreal uses.
+`Source/APCpp/lib/Linux` is therefore built with the same compiler and standard
+library the engine uses.
 
 ## Toolchain
 
-Satisfactory 1.2 runs on UE 5.6.1-CSS, whose Linux toolchain is
-`v25_clang-18.1.0-rockylinux8`. Epic hosts it publicly:
+Everything is derived from the engine, so the only input is `UNREAL_ENGINE_DIR`,
+pointing at the folder that contains `Engine/`:
 
 ```bash
-curl -O https://cdn.unrealengine.com/Toolchain_Linux/native-linux-v25_clang-18.1.0-rockylinux8.tar.gz
-tar xzf native-linux-v25_clang-18.1.0-rockylinux8.tar.gz
-export UE_LINUX_TOOLCHAIN=$PWD/v25_clang-18.1.0-rockylinux8
+export UNREAL_ENGINE_DIR=/path/to/UnrealEngineCSS
 ```
+
+Do not substitute the standalone `v25_clang-18.1.0-rockylinux8` toolchain from
+Epic's CDN. Its clang is the right one, byte for byte, but it carries libc++
+18.1.0 while 5.6.1-CSS compiles against libc++ 19.1.7 from
+`Engine/Source/ThirdParty/Unix/LibCxx`. The engine ships the same clang under
+`Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64`, so taking both from
+the engine keeps them from drifting apart.
 
 ## APCpp
 
@@ -57,8 +63,21 @@ taken from the host so the mod does not depend on libraries the dedicated server
 image may not ship, matching what `lib/Win64` does.
 
 The second links every `AP_` function `Source/Archipelago` calls against the
-staged archives. It needs only the toolchain, so it catches a stale or partial
-`lib/Linux` without a full engine build.
+staged archives, using the engine's own libc++, so it catches a stale or partial
+`lib/Linux` without packaging the mod.
+
+To confirm the archives agree with the engine's standard library, check that
+every libc++ symbol they reference is one the engine defines:
+
+```bash
+UELIB=$UNREAL_ENGINE_DIR/Engine/Source/ThirdParty/Unix/LibCxx/lib/Unix/x86_64-unknown-linux-gnu
+cd Source/APCpp/lib/Linux
+nm -u *.a mbedtls/*.a | grep -oE '_ZN?K?St3__1[A-Za-z0-9_]+' | sort -u > /tmp/need
+nm --defined-only $UELIB/libc++.a $UELIB/libc++abi.a | grep -oE '_ZN?K?St3__1[A-Za-z0-9_]+' | sort -u > /tmp/have
+comm -23 /tmp/need /tmp/have
+```
+
+That last command printing nothing is the result you want.
 
 ## Packaging
 
