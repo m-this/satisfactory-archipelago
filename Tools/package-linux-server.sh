@@ -23,6 +23,11 @@ if [[ ! -f $uproject ]]; then
     exit 1
 fi
 
+# Both are cheap and both catch a package that installs and then misbehaves at
+# runtime, which is the failure mode this port keeps producing.
+"$repo_root/Tools/check-contentlib-eol.sh"
+"$repo_root/Tools/check-apcpp-linux-runtime.sh"
+
 # The project builds the mod from Mods/, so point that at this checkout rather
 # than keeping a second copy of the sources.
 if [[ ! -e $mod_link ]] || [[ $(readlink -f "$mod_link") != "$repo_root" ]]; then

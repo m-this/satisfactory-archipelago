@@ -55,6 +55,7 @@ runtime. `Tools/build-apcpp-linux.sh` fails if the fork's
 ```bash
 ./Tools/build-apcpp-linux.sh
 ./Tools/check-apcpp-linux-link.sh
+./Tools/check-apcpp-linux-runtime.sh
 ```
 
 The first builds APCpp, IXWebSocket, jsoncpp, zlib and mbedtls and stages them
@@ -65,6 +66,11 @@ image may not ship, matching what `lib/Win64` does.
 The second links every `AP_` function `Source/Archipelago` calls against the
 staged archives, using the engine's own libc++, so it catches a stale or partial
 `lib/Linux` without packaging the mod.
+
+The third actually calls them: it runs the `AP_Init`, `AP_Start`, poll and
+`AP_Shutdown` sequence `AApSubsystem` runs, against an unroutable address so it
+needs no Archipelago server. Taking a function's address proves nothing about
+what happens when it runs.
 
 To confirm the archives agree with the engine's standard library, check that
 every libc++ symbol they reference is one the engine defines:
@@ -103,6 +109,19 @@ export SATISFACTORY_PROJECT_DIR=/path/to/StarterProject
 That builds the editor target, which the cook step needs, then runs Alpakit's
 `PackagePlugin` for the Linux server and writes the zip to
 `$SATISFACTORY_PROJECT_DIR/Saved/ArchivedPlugins/Archipelago/`.
+
+### ContentLib patches need CRLF
+
+`ContentLib/**/*.json` starts with the target class path on its own line,
+followed by the patch object. ContentLib splits the two on the first CRLF, so a
+file checked out with LF endings is read as one very long class path: it logs
+`Detected a double slash in a class path` (it found the `//` in the `$schema`
+URL) and drops the patch. Nothing fails loudly, the mod just loads with a
+vanilla progression tree.
+
+Windows checkouts turned these into CRLF on their own, which is why only the
+Linux package was affected. `.gitattributes` now pins `eol=crlf` on them and
+`Tools/check-contentlib-eol.sh` runs before packaging.
 
 ## Releases
 
