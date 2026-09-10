@@ -123,6 +123,21 @@ Windows checkouts turned these into CRLF on their own, which is why only the
 Linux package was affected. `.gitattributes` now pins `eol=crlf` on them and
 `Tools/check-contentlib-eol.sh` runs before packaging.
 
+## TLS needs a CA bundle outside Windows
+
+IXWebSocket's mbedtls backend implements `loadSystemCertificates` for Windows
+only. Everywhere else the function returns `false` with a comment saying a Linux
+implementation could be written, so every `wss://` handshake fails. `AP_Init`
+then falls back to plaintext `ws://` after two retries, the Archipelago servers
+refuse that, and the mod reports the connection as failed for a slot name that
+is perfectly valid: the same details connect fine from a Windows client.
+
+The fork sets `ix::SocketTLSOptions::caFile` to the first bundle it finds among
+`/etc/ssl/certs/ca-certificates.crt`, `/etc/pki/tls/certs/ca-bundle.crt`,
+`/etc/ssl/ca-bundle.pem` and `/etc/ssl/cert.pem`, and logs which one it used.
+`Tools/check-apcpp-linux-runtime.sh <host:port> <seconds>` against a real room
+prints `AP: Connected to Archipelago` and `AP: Authenticated` when this works.
+
 ## Connection details on a dedicated server
 
 The server URI, slot name and password are session settings, so on a client they
