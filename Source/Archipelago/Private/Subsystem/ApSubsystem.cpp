@@ -59,12 +59,16 @@ void AApSubsystem::ApplyConnectionFileOverride(FString& uri, FString& user, FStr
 		return;
 	}
 
+	// Whatever the file names, it wins. Only the empty slot name decides whether
+	// this runs at all, and by then every other session setting is a default: the
+	// server URI in particular defaults to "archipelago.gg:", with no port, which
+	// is not empty and would otherwise keep the file's address out.
 	FString value;
-	if (uri.IsEmpty() && parsedJson->TryGetStringField(TEXT("ServerURI"), value))
+	if (parsedJson->TryGetStringField(TEXT("ServerURI"), value) && !value.TrimStartAndEnd().IsEmpty())
 		uri = value.TrimStartAndEnd();
-	if (user.IsEmpty() && parsedJson->TryGetStringField(TEXT("UserName"), value))
+	if (parsedJson->TryGetStringField(TEXT("UserName"), value) && !value.TrimStartAndEnd().IsEmpty())
 		user = value.TrimStartAndEnd();
-	if (password.IsEmpty() && parsedJson->TryGetStringField(TEXT("Password"), value))
+	if (parsedJson->TryGetStringField(TEXT("Password"), value) && !value.IsEmpty())
 		password = value;
 
 	UE_LOGFMT(LogApSubsystem, Display, "AApSubsystem::ApplyConnectionFileOverride() read {0}, uri '{1}', slot '{2}'", path, uri, user);
