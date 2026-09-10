@@ -1,2 +1,7 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# ContentLib splits a patch file into class path and JSON on the first CRLF, so
+# an LF-only checkout makes it read the whole file as one class path and drop
+# the patch. Windows checkouts always had CRLF here; Linux ones must match.
+ContentLib/**/*.json text eol=crlf
