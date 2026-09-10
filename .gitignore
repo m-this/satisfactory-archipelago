@@ -80,3 +80,5 @@ Mods/*
 Configs/*
 
 *.pak
+# APCpp writes its data package cache next to the working directory
+APCpp_datapkg.cache
