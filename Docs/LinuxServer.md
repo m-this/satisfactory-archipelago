@@ -123,6 +123,30 @@ Windows checkouts turned these into CRLF on their own, which is why only the
 Linux package was affected. `.gitattributes` now pins `eol=crlf` on them and
 `Tools/check-contentlib-eol.sh` runs before packaging.
 
+## Connection details on a dedicated server
+
+The server URI, slot name and password are session settings, so on a client they
+travel with the save. A dedicated server does not carry them across a session
+restart: what the server manager writes is applied to the running session and is
+gone by the next load, which leaves the mod connecting with an empty slot and the
+save reported as unusable. SML never writes `SessionSettings=` into the game mode
+options string there, so there is nothing for the next session to read back.
+
+`FactoryGame/Configs/ArchipelagoConnection.json`, next to the mod's own
+`Archipelago.cfg`, gives those servers somewhere durable to put them:
+
+```json
+{
+  "ServerURI": "archipelago.gg:12345",
+  "UserName": "YourSlotName",
+  "Password": ""
+}
+```
+
+`AApSubsystem::ApplyConnectionFileOverride` only fills in fields the session
+settings left empty, and only when the slot name is empty to begin with, so a
+save that carries its own details still wins and clients are unaffected.
+
 ## Releases
 
 `.github/workflows/release.yml` runs the same script on a tag push and attaches

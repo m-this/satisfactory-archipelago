@@ -5,6 +5,8 @@
 #include "ApUtils.h"
 #include "JsonObjectConverter.h"
 #include "Async/Async.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 #include "SessionSettings/SessionSettingsManager.h"
 #include "Settings/SMLOptionsLibrary.h"
 #include "Logging/StructuredLog.h"
@@ -34,12 +36,49 @@ AApSubsystem* AApSubsystem::Get(UWorld* world) {
 	return SubsystemActorManager->GetSubsystemActor<AApSubsystem>();
 }
 
+// A dedicated server does not carry session settings across a session restart:
+// what the server manager writes is applied to the running session and gone by
+// the next load, so this runs with an empty slot name and connects nowhere. This
+// file sits next to the mod's own Archipelago.cfg and gives those servers a
+// place to put the connection details that outlives a restart. It only fills in
+// what the session settings left empty, so a save that carries its own details
+// still wins.
+void AApSubsystem::ApplyConnectionFileOverride(FString& uri, FString& user, FString& password) {
+	const FString path = FPaths::ProjectDir() + TEXT("Configs/ArchipelagoConnection.json");
+
+	FString contents;
+	if (!FFileHelper::LoadFileToString(contents, *path)) {
+		UE_LOGFMT(LogApSubsystem, Display, "AApSubsystem::ApplyConnectionFileOverride() no {0}, keeping the session settings", path);
+		return;
+	}
+
+	TSharedPtr<FJsonObject> parsedJson;
+	const TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(contents);
+	if (!FJsonSerializer::Deserialize(reader, parsedJson) || !parsedJson.IsValid()) {
+		UE_LOGFMT(LogApSubsystem, Error, "AApSubsystem::ApplyConnectionFileOverride() {0} is not valid json, ignoring it", path);
+		return;
+	}
+
+	FString value;
+	if (uri.IsEmpty() && parsedJson->TryGetStringField(TEXT("ServerURI"), value))
+		uri = value.TrimStartAndEnd();
+	if (user.IsEmpty() && parsedJson->TryGetStringField(TEXT("UserName"), value))
+		user = value.TrimStartAndEnd();
+	if (password.IsEmpty() && parsedJson->TryGetStringField(TEXT("Password"), value))
+		password = value;
+
+	UE_LOGFMT(LogApSubsystem, Display, "AApSubsystem::ApplyConnectionFileOverride() read {0}, uri '{1}', slot '{2}'", path, uri, user);
+}
+
 void AApSubsystem::ConnectToArchipelago() {
 	USessionSettingsManager* SessionSettings = GetWorld()->GetSubsystem<USessionSettingsManager>();
 
 	FString uriFString = USMLOptionsLibrary::GetStringOptionValue(SessionSettings, "Archipelago.Connection.ServerURI").TrimStartAndEnd();
 	FString userFString = USMLOptionsLibrary::GetStringOptionValue(SessionSettings, "Archipelago.Connection.UserName").TrimStartAndEnd();
 	FString passwordFString = USMLOptionsLibrary::GetStringOptionValue(SessionSettings, "Archipelago.Connection.Password");
+
+	if (userFString.IsEmpty())
+		ApplyConnectionFileOverride(uriFString, userFString, passwordFString);
 
 	std::string const uri = TCHAR_TO_UTF8(*uriFString);
 	std::string const user = TCHAR_TO_UTF8(*userFString);

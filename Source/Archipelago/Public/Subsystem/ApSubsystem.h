@@ -196,6 +196,7 @@ private:
 	bool InitializeTick(FDateTime connectingStartedTime, int timeout) const;
 
 	void ConnectToArchipelago();
+	static void ApplyConnectionFileOverride(FString& uri, FString& user, FString& password);
 	void TimeoutConnection() const;
 
 	void CheckConnectionState() const;
