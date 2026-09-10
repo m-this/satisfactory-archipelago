@@ -77,7 +77,9 @@ void UApGameInstanceModule::DediServer_CopySettingFromSessionSettings(const USes
 
 	FString current = applyType->GetAppliedValue().GetValue<FString>();
 
-	OutServerOptions[cvar] = current;
+	// The base handler fills OutServerOptions with the game's own options, so the
+	// Archipelago cvars are never already in it and operator[] would FindChecked.
+	OutServerOptions.FindOrAdd(cvar) = current;
 
 	FVariant perndingVariant = applyType->GetPendingAppliedValue();
 	if (!perndingVariant.IsEmpty()) {
