@@ -20,7 +20,10 @@ fi
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 module=${1:-}
 if [[ -z $module ]]; then
-    module=$(find "$repo_root" /home/*/projects -name 'libFactoryServer-Archipelago-Linux-Shipping.so' 2>/dev/null | head -1)
+    # -print -quit rather than piping to head: head closing the pipe early kills
+    # find with SIGPIPE, and pipefail then aborts this script before it checks a
+    # single symbol, silently, which is the last thing a release gate should do.
+    module=$(find "$repo_root" /home/*/projects -name 'libFactoryServer-Archipelago-Linux-Shipping.so' -print -quit 2>/dev/null)
 fi
 if [[ ! -f $module ]]; then
     echo "Pass the built libFactoryServer-Archipelago-Linux-Shipping.so as the first argument." >&2
