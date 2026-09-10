@@ -38,7 +38,7 @@ private:
 	void DediServer_ApplyOptions(const TMap<FString, FString>& UpdatedServerOptions);
 
 	void DediServer_CopySettingFromSessionSettings(const USessionSettingsManager* sessionSettings, const FString& cvar, TMap<FString, FString>& OutServerOptions, TMap<FString, FString>& OutPendingServerOptions);
-	void DediServer_CopySettingToSessionSettings(const USessionSettingsManager* sessionSettings, const FString& cvar, const TMap<FString, FString>& UpdatedServerOptions);
+	void DediServer_CopySettingToSessionSettings(USessionSettingsManager* sessionSettings, const FString& cvar, const TMap<FString, FString>& UpdatedServerOptions);
 
 	static void VariantAsString(TCallScope<FString(*)(const FVariant&)>& Scope, const FVariant& variant);
 	static void StringAsVariant(TCallScope<bool(*)(const FString&, EVariantTypes, FVariant&)>& Scope, const FString& string, EVariantTypes variantType, FVariant& outVariant);

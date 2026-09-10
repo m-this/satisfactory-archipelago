@@ -66,6 +66,8 @@ void UApGameInstanceModule::DediServer_ApplyOptions(const TMap<FString, FString>
 	DediServer_CopySettingToSessionSettings(sessionSettings, "Archipelago.Connection.ServerURI", UpdatedServerOptions);
 	DediServer_CopySettingToSessionSettings(sessionSettings, "Archipelago.Connection.UserName", UpdatedServerOptions);
 	DediServer_CopySettingToSessionSettings(sessionSettings, "Archipelago.Connection.Password", UpdatedServerOptions);
+
+	sessionSettings->ApplyChanges();
 }
 
 void UApGameInstanceModule::DediServer_CopySettingFromSessionSettings(const USessionSettingsManager* sessionSettings, const FString& cvar, TMap<FString, FString>& OutServerOptions, TMap<FString, FString>& OutPendingServerOptions) {
@@ -101,17 +103,20 @@ void UApGameInstanceModule::DediServer_CopySettingFromSessionSettings(const USes
 	}
 }
 
-void UApGameInstanceModule::DediServer_CopySettingToSessionSettings(const USessionSettingsManager* sessionSettings, const FString& cvar, const TMap<FString, FString>& UpdatedServerOptions) {
+void UApGameInstanceModule::DediServer_CopySettingToSessionSettings(USessionSettingsManager* sessionSettings, const FString& cvar, const TMap<FString, FString>& UpdatedServerOptions) {
 	if (!IsRunningDedicatedServer())
 		UE_LOGFMT(LogApGameInstanceModule, Fatal, "UApGameInstanceModule::DediServer_CopySettingToSessionSettings() called outside of dedicated server");
 
 	if (UpdatedServerOptions.Contains(cvar)) {
+		// Going through the option interface rather than ForceSetValue on the apply
+		// type: SML serialises a session setting into the game mode options string
+		// from its pending applied value, and force setting the current value left
+		// that pending value empty, so nothing was written to the save and the next
+		// session restart read the defaults back.
+		USMLOptionsLibrary::SetStringOptionValue(sessionSettings, cvar, UpdatedServerOptions[cvar]);
+
 		UFGUserSettingApplyType* setting = sessionSettings->FindSessionSetting(cvar);
 		UFGUserSettingApplyType_RequireSessionRestart* applyType = Cast<UFGUserSettingApplyType_RequireSessionRestart>(setting);
-
-		applyType->ForceSetPendingAppliedValue(UpdatedServerOptions[cvar]);
-		//the above line does not correctly apply the value of session restart so for now we just hard set the current value
-		applyType->ForceSetValue(UpdatedServerOptions[cvar], false);
 
 		if (!cvar.Contains("Password", ESearchCase::CaseSensitive)) {
 			TArray<FString> out_debugData;
